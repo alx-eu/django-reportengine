@@ -157,7 +157,7 @@ class ReportView(ListView, RequestReportMixin):
         self.report_request = ReportRequest.objects.get(token=token)
         self.report = self.report_request.get_report()
         ReportRequest.objects.filter(pk=self.report_request.pk).update(viewed_on=datetime.datetime.now())
-    
+
     def get_queryset(self):
         return ReportRowQuery(self.report_request.rows.all())
     
@@ -208,14 +208,29 @@ class ReportView(ListView, RequestReportMixin):
                     "aggregates":self.report_request.aggregates,
                     "cl":self.get_changelist(data),
                     'report_request':self.report_request,
+                     'charts': self.report_request.get_charts(self.output_format, self.object_list),
                     "urlparams":urlencode(self.report_request.params)})
         return data
     
+    def get_output_format(self):
+        outputformat = None
+        output = self.kwargs.get('output', 'admin')
+        if output:
+            for of in self.report.output_formats:
+                if of.slug == output:
+                    outputformat=of
+        if not outputformat:
+            outputformat = self.report.output_formats[0]
+        self.output_format = outputformat
+        return outputformat
+        
+
     def get(self, request, *args, **kwargs):
         try:
             self.get_report_request()
         except ReportRequest.DoesNotExist:
             raise Http404()
+        self.get_output_format()
         status = self.check_report_status()
         if 'error' in status: #there was an error, try recreating the report
             #CONSIDER add max retries
@@ -232,15 +247,7 @@ class ReportView(ListView, RequestReportMixin):
         self.object_list = self.get_queryset()
         kwargs['object_list'] = self.object_list
         data = self.get_context_data(**kwargs)
-        outputformat = None
-        output = kwargs.get('output', 'admin')
-        if output:
-            for of in self.report.output_formats:
-                if of.slug == output:
-                    outputformat=of
-        if not outputformat:
-            outputformat = self.report.output_formats[0]
-        return outputformat.get_response(data, request)
+        return self.output_format.get_response(data, request)
 
 view_report = never_cache(staff_member_required(ReportView.as_view()))
 

@@ -105,6 +105,10 @@ class ReportRequest(AbstractScheduledTask):
         self.aggregates = aggregates
         self.completion_timestamp = datetime.datetime.now()
         self.save()
+
+    def get_charts(self, output_format, data):
+        report = self.get_report()
+        return [chart_class(report.columns, data) for chart_class in report.get_charts(output_format)]
     
     def get_task_function(self):
         from tasks import async_report
@@ -114,6 +118,11 @@ class ReportRequestRow(models.Model):
     report_request = models.ForeignKey(ReportRequest, related_name='rows')
     row_number = models.PositiveIntegerField()
     data = JSONField(datatype=list)
+
+    def __iter__(self):
+        return iter(self.data)
+    def __getitem__(self, key):
+        return self.data[key]
 
 class ReportRequestExport(AbstractScheduledTask):
     report_request = models.ForeignKey(ReportRequest, related_name='exports')

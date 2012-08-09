@@ -1,13 +1,17 @@
 """Reports base class. This reports module trys to provide an ORM agnostic reports engine that will allow nice reports to be generated and exportable in a variety of formats. It seeks to be easy to use with querysets, raw SQL, or pure python. An additional goal is to have the reports be managed by model instances as well (e.g. a generic SQL based report that can be done in the backend).
 
 """
+import collections
+import datetime
+from functools import wraps
+
 from django import forms
 from django.db import models
 from django.db.models.fields.related import RelatedField
 from django.db.models.fields import FieldDoesNotExist
+
 from filtercontrols import *
 from outputformats import *
-import datetime
 
 # Pulled from vitalik's Django-reporting
 def get_model_field(model, name):
@@ -23,11 +27,55 @@ def get_lookup_field(model, original, lookup):
     next_lookup = '__'.join(parts[1:])
     return get_lookup_field(rel_model, original, next_lookup)
 
+def rearrange_columns(*column_indices):
+    u'''Returns decorator for chart callable that rearranges presence and ordering of schema's and data's items.
+
+    Without arguments, returns identity decorator'''
+    # See charts documentation below
+
+    def columns_decorator(chart_callable):
+        if not column_indices:
+            return chart_callable
+
+        # This is a function even if chart_callable was a class, but that doesn't bother us.
+        @wraps(chart_callable)
+        def decorated_callable(schema, data, *args, **kwargs):
+            rearranged_schema = [schema[j] for j in column_indices]
+            rearranged_data = [[row[j] for j in column_indices] for row in data]
+            return chart_callable(rearranged_schema, rearranged_data, *args, **kwargs)
+        return decorated_callable
+    return columns_decorator
+
+class ReportMetaclass(type):
+    def __new__(cls, *args, **kwargs):
+        report_class = super(ReportMetaclass, cls).__new__(cls, *args, **kwargs)
+
+        # If columns are not specified, fill them with labels; also handle the opposite situation.
+        report_class.columns = report_class.columns or [(label,) for label in report_class.labels]
+        report_class.labels = report_class.labels or [column[0] for column in report_class.columns]
+        
+        return report_class
+
 class Report(object):
+    __metaclass__ = ReportMetaclass
+    
     verbose_name="Abstract Report"
     namespace = "Default"
     slug ="base"
-    labels = None
+
+    # NOTE: you should specify either "columns" or "labels", not both.
+    # CONSIDER: should labels be removed?
+
+    # ("foo", "bar", "baz")
+    labels = []
+    
+    # An iterable of tuples (column_id, data_type, label, options), where data type is one of
+    # 'string' 'number' 'boolean' 'date' 'datetime' 'timeofday' and options is a dictionary
+    # data_type, label and options are optional.
+    #
+    # This is designed to reflect https://developers.google.com/chart/interactive/docs/dev/gviz_api_lib#describeschema
+    columns = []
+    
     per_page=100
     can_show_all=True
     output_formats=[AdminOutputFormat(),CSVOutputFormat()]
@@ -37,9 +85,47 @@ class Report(object):
     date_field = None  # if specified will lookup for this date field. .this is currently limited to queryset based lookups
     default_mask = {}  # a dict of filter default values. Can be callable
 
-    # TODO add charts = [ {'name','type e.g. bar','data':(0,1,3) cols in table}]
-    # then i can auto embed the charts at the top of the report based upon that data..
+    # Charts
+    #
+    # This should be an iterable of tuples where first element is an iterable of callables that accept data schema
+    # (formatted like columns attribute) and data rows. This callables should return chart objects.
+    # If you don't know where to obtain such callables, take a look at https://github.com/KrzysiekJ/gchart
+    #
+    # Second element is an iterable of column indices that should be included in the chart (order matters).
+    # If it is empty, all columns will be included.
+    #
+    # If third element does not evaluate to False, it should be either an iterable of output format classes or a callable.
+    #
+    # For example, if you want to embed some charts in AdminOutputFormat, you can write:
+    # charts = (
+    #     ([foo_chart, bar_chart], (), (AdminOutputFormat,)),
+    #     )
+    # or
+    # charts = (
+    #     ([foo_chart, bar_chart], (), lambda output_format: isinstance(output_format, AdminOutputFormat)),
+    #     )
+    # 
+    # Charts will additionally be filtered by output format's can_embed method
+    charts = []
 
+    def get_charts(self, output_format):
+        u'''Returns chart callables that can be used by particular output format.'''
+
+        return sum(
+            [
+                [
+                    rearrange_columns(*column_indices)(chart) for chart in charts if (
+                        not chart_filter or
+                        callable(chart_filter) and chart_filter(chart) or
+                        isinstance(chart_filter, collections.Iterable) and any(isinstance(output_format, output_format_class) for output_format_class in chart_filter)
+                        ) and
+                    output_format.can_embed(chart) # CONSIDER: maybe can_embed should be called internally by output format?
+                    ]
+                for charts, column_indices, chart_filter in self.charts
+                ],
+            []
+            )
+    
     def get_default_mask(self):
         """Builds default mask. The filter is merged with this to create the filter for the report. Items can be callable and will be resolved when called here (which should be at view time)."""
         m={}
@@ -58,7 +144,6 @@ class Report(object):
         """takes in parameters and pumps out an iterable of iterables for rows/cols, an list of tuples with (name/value) for the aggregates"""
         raise NotImplementedError("Subclass should return [],(('total',0),)")
 
-
     # CONSIDER do this by day or by month? month seems most efficient in terms of optimizing queries
     def get_monthly_aggregates(self,year,month):
         """Called when assembling a calendar view of reports. This will be queried for every day, so should be quick"""
@@ -67,7 +152,7 @@ class Report(object):
 
 class QuerySetReport(Report):
     # TODO make labels more addressable. now fixed to fields in model. what happens with relations?
-    labels = None
+    labels = []
     queryset = None
     list_filter = []
 
@@ -103,7 +188,6 @@ class QuerySetReport(Report):
 
 class ModelReport(QuerySetReport):
     model = None
-   
  
     def __init__(self):
         super(ModelReport, self).__init__()

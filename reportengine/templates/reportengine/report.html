@@ -11,6 +11,9 @@
     <script type="text/javascript" src="{% admin_media_prefix %}js/core.js"></script>
     <script type="text/javascript" src="{% admin_media_prefix %}js/calendar.js"></script>
     <script type="text/javascript" src="{% admin_media_prefix %}js/admin/DateTimeShortcuts.js"></script>
+    {% for chart in charts %}
+    {{ chart.initialize_html }}
+    {% endfor %}
 {% endblock %}
 
 {% block bodyclass %}change-list{% endblock %}
@@ -62,6 +65,10 @@
         {% endfor %}
     </div>
     {% endblock %}
+
+{% for chart in charts %}
+    {{ chart.render_html }}
+{% endfor %}
 
 <h3>Data</h3>
  <table>

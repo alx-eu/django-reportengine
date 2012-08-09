@@ -28,6 +28,10 @@ class OutputFormat(object):
     def get_response(self,context,request):
         raise NotImplemented("Use a subclass of OutputFormat.")
 
+    def can_embed(self, chart):
+        # You will probably want to employ duck typing here.
+        return False
+
 class AdminOutputFormat(OutputFormat):
     verbose_name="Admin Report"
     slug="admin"
@@ -39,6 +43,10 @@ class AdminOutputFormat(OutputFormat):
         context.update({"output_format":self})
         return render_to_response('reportengine/report.html', context,
                               context_instance=RequestContext(request))
+
+    def can_embed(self, chart):
+        # Actually, initalize_html is also used in template but we don't consider it as required attribute.
+        return hasattr(chart, 'render_html')
 
 class CSVOutputFormat(OutputFormat):
     verbose_name="CSV (comma separated value)"
