@@ -22,5 +22,4 @@ Long Term
 
 TODO: build xml file for exporting permissions to Google SDC for secure google spreadsheet importing
 TODO: Add oauth for outside report gathering/pulling
-TODO: Add support for embedded graphs and charts (maybe alternate output format that allows embedding?)
 TODO: Create emailer model that allows you to specify a certain report+filter and have it emailed daily
