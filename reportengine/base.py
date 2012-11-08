@@ -125,6 +125,11 @@ class Report(object):
                 ],
             []
             )
+
+    def get_conversion_function(self, column_name, output_format):
+        u'''Returns function used to convert value before outputting it in particular output format.'''
+        # Currently this is used only in AdminOutputFormat
+        return lambda x: x
     
     def get_default_mask(self):
         """Builds default mask. The filter is merged with this to create the filter for the report. Items can be callable and will be resolved when called here (which should be at view time)."""

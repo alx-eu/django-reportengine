@@ -204,6 +204,7 @@ class ReportView(ListView, RequestReportMixin):
         data.update({'report': self.report,
                     'title':self.report.verbose_name,
                     'rows':self.object_list,
+                     'conversion_functions':[self.report.get_conversion_function(column_data[0], self.output_format) for column_data in self.report.columns],
                     'filter_form':self.get_filter_form(),
                     "aggregates":self.report_request.aggregates,
                     "cl":self.get_changelist(data),

@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% load adminmedia admin_list i18n %}
+{% load reportengine_conversions %}
 
 {% block extrastyle %}
     <link rel="stylesheet" type="text/css" href="{% admin_media_prefix %}css/forms.css" />
@@ -83,7 +84,7 @@
     {% for row in object_list %}
     <tr>
         {% for v in row %}
-        <td>{{ v }}</td>
+        <td>{% convert_report_value v forloop.counter0 %}</td>
         {% endfor %}
     </tr>
     {% endfor %}
