@@ -1,19 +1,19 @@
 {% extends "admin/base_site.html" %}
-{% load adminmedia admin_list i18n %}
+{% load admin_list i18n %}
 {% load reportengine_conversions %}
 
 {% block extrastyle %}
-    <link rel="stylesheet" type="text/css" href="{% admin_media_prefix %}css/forms.css" />
-    <link rel="stylesheet" type="text/css" href="{% admin_media_prefix %}css/changelists.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin/css/forms.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin/css/changelists.css" />
 {% endblock %}
 
 {% block extrahead %}
-    <script type="text/javascript" src="{% url admin:jsi18n %}"></script>
-    <script type="text/javascript" src="{% admin_media_prefix %}js/core.js"></script>
-    <script type="text/javascript" src="{% admin_media_prefix %}js/calendar.js"></script>
-    <script type="text/javascript" src="{% admin_media_prefix %}js/admin/DateTimeShortcuts.js"></script>
+    <script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}admin/js/core.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}admin/js/calendar.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}admin/js/admin/DateTimeShortcuts.js"></script>
     {% for chart in charts %}
-    {{ chart.initialize_html }}
+      {{ chart.initialize_html }}
     {% endfor %}
 {% endblock %}
 
@@ -22,7 +22,7 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
      <a href="/admin/">{% trans "Home" %}</a> &rsaquo;
-     <a href="{% url reports-list %}">{% trans "Reports" %}</a> &rsaquo;
+     <a href="{% url 'reports-list' %}">{% trans "Reports" %}</a> &rsaquo;
      <a href="{{ report_request.get_report_url }}">{{report.verbose_name}}</a> &rsaquo;
      {% trans "Report Result" %}
 </div>
@@ -61,7 +61,7 @@
         {% ifequal of output_format %}
         {{ of.verbose_name }} {% if not forloop.last %}|{% endif %}
         {% else %}
-        <a href="{% url reports-request-view-format report_request.token of.slug %}">{{ of.verbose_name }}</a> {% if not forloop.last %}|{% endif %}
+        <a href="{% url 'reports-request-view-format' report_request.token of.slug %}">{{ of.verbose_name }}</a> {% if not forloop.last %}|{% endif %}
         {% endifequal %}
         {% endfor %}
     </div>

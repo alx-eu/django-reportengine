@@ -5,13 +5,13 @@
 {% block calendarcontent %}
     <h2>Reports for {{ date|date:"M Y" }}</h2>
 
-    <a href="{% url reports-calendar-current %}">current month</a>
+    <a href="{% url 'reports-calendar-current' %}">current month</a>
     <!-- TODO: make this localized -->
     <table>
         <tr>
-            <td><a href="{% url reports-calendar-month prev.year prev.month %}">&laquo;</a></td>
+            <td><a href="{% url 'reports-calendar-month' prev.year prev.month %}">&laquo;</a></td>
             <td colspan="5"></td>
-            <td><a href="{% url reports-calendar-month next.year next.month %}">&raquo;</a></td>
+            <td><a href="{% url 'reports-calendar-month' next.year next.month %}">&raquo;</a></td>
         </tr>
         <tr>
             <td>M</td>
@@ -28,7 +28,7 @@
         <td>
             {% if day %}
                 <div class="day">
-                   <a href="{% url reports-calendar-day date.year date.month date.day %}">{{ day }}</a>
+                   <a href="{% url 'reports-calendar-day' date.year date.month date.day %}">{{ day }}</a>
                 </div>
             {% endif %}
         </td>

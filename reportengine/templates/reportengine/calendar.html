@@ -1,8 +1,8 @@
 {% extends "admin/base_site.html" %}
-{% load adminmedia admin_list i18n %}
+{% load admin_list i18n %}
 
 {% block extrastyle %}
-  <link rel="stylesheet" type="text/css" href="{% admin_media_prefix %}css/changelists.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin/css/changelists.css" />
 {% endblock %}
 
 {% block bodyclass %}change-list{% endblock %}
@@ -10,7 +10,7 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
      <a href="/admin/">{% trans "Home" %}</a> &rsaquo;
-     <a href="{% url reports-list %}">Reports</a> &rsaquo;
+     <a href="{% url 'reports-list' %}">Reports</a> &rsaquo;
      calendar for {% block calendar_breadcrumb %}{% endblock %}
 </div>
 {% endblock %}
@@ -20,7 +20,7 @@
 {% block content %}
   <div id="content-main">
     {% block object-tools %}{% endblock %}
-    
+
     {% block calendarcontent %}{% endblock %}
 
   </div>
