@@ -31,16 +31,16 @@ def report_list(request):
 class ReportRowQuery(object):
     def __init__(self, queryset):
         self.queryset = queryset
-    
+
     def wrap(self, entry):
         return entry.data
-    
+
     def __len__(self):
         return len(self.queryset)
-    
+
     def count(self):
         return self.queryset.count()
-    
+
     def __getitem__(self, val):
         if isinstance(val, slice):
             results = list()
@@ -52,17 +52,17 @@ class ReportRowQuery(object):
 
 class RequestReportMixin(object):
     asynchronous_report = ASYNC_REPORTS
-    
+
     def check_report_status(self):
         #check to see if the report is not complete but async is off
         if not self.report_request.completion_timestamp and (not self.asynchronous_report or getattr(settings, 'CELERY_ALWAYS_EAGER', False)):
             self.report_request.build_report()
             assert self.report_request.completion_timestamp
-        
+
         #check to see if the task failed
         if self.report_request.task_status() in ('FAILURE',):
             return {'error':'Task Failed', 'completed':False}
-        
+
         return {'completed':bool(self.report_request.completion_timestamp)}
 
 '''
@@ -71,7 +71,7 @@ creport requested
 
 class RequestReportView(TemplateView, RequestReportMixin):
     template_name = 'reportengine/request_report.html'
-    
+
     def report_params(self):
         '''
         Return report params without the output format
@@ -84,7 +84,7 @@ class RequestReportView(TemplateView, RequestReportMixin):
         params.pop('_submit', None)
         params.pop('csrfmiddlewaretoken', None)
         return params
-    
+
     def create_report_request(self):
         report_params = self.report_params()
         token_params = [str(datetime.datetime.now()), self.kwargs['namespace'], self.kwargs['slug'], urlencode(report_params)]
@@ -95,11 +95,11 @@ class RequestReportView(TemplateView, RequestReportMixin):
                            params=report_params)
         rr.save()
         return rr
-    
+
     #CONSIDER inherit from a form view
     def get_report_class(self):
         return reportengine.get_report(self.kwargs['namespace'], self.kwargs['slug'])
-    
+
     def get_form(self):
         report_cls = self.get_report_class()
         report = report_cls()
@@ -108,19 +108,21 @@ class RequestReportView(TemplateView, RequestReportMixin):
         else:
             form = report.get_filter_form(data=None)
         return form
-    
+
     def get_requested_reports(self):
-        qs = ReportRequest.objects.filter(namespace=self.kwargs['namespace'],
-                                          slug=self.kwargs['slug'],)
+        qs = ReportRequest.objects.filter(
+            namespace=self.kwargs['namespace'],
+            slug=self.kwargs['slug'],
+        ).order_by('-id')
         return qs
-    
+
     def get_context_data(self, **kwargs):
         context = TemplateView.get_context_data(self, **kwargs)
         context['filter_form'] = self.get_form()
         context['report'] = self.get_report_class()()
         context['requested_reports'] = self.get_requested_reports()
         return context
-    
+
     def create_and_redirect_to_report_request(self):
         self.report_request = self.create_report_request()
         self.report = self.report_request.get_report()
@@ -131,13 +133,13 @@ class RequestReportView(TemplateView, RequestReportMixin):
             self.report_request = ReportRequest.objects.get(pk=self.report_request.pk)
             assert self.report_request.completion_timestamp
         return HttpResponseRedirect(self.report_request.get_absolute_url())
-    
+
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         if not context['filter_form'].fields and not context['requested_reports']:
             return self.create_and_redirect_to_report_request()
         return self.render_to_response(context)
-    
+
     def post(self, request, *args, **kwargs):
         self.form = self.get_form()
         if self.form.is_valid(): #TODO filter controls need to be optional
@@ -151,7 +153,7 @@ request_report = never_cache(staff_member_required(RequestReportView.as_view()))
 class ReportView(ListView, RequestReportMixin):
     asynchronous_report = ASYNC_REPORTS
     paginate_by = 50
-    
+
     def get_report_request(self):
         token = self.kwargs['token']
         self.report_request = ReportRequest.objects.get(token=token)
@@ -160,11 +162,11 @@ class ReportView(ListView, RequestReportMixin):
 
     def get_queryset(self):
         return ReportRowQuery(self.report_request.rows.all())
-    
+
     def get_filter_form(self):
         filter_form = self.report.get_filter_form(self.request.REQUEST)
         return filter_form
-    
+
     def get_changelist(self, info):
         paginator = info['paginator']
         p = info['page_obj']
@@ -198,7 +200,7 @@ class ReportView(ListView, RequestReportMixin):
         cl_params = order_by and dict(params,order_by=order_by) or params
         cl = MiniChangeList(paginator, page, cl_params, self.report)
         return cl
-    
+
     def get_context_data(self, **kwargs):
         data = ListView.get_context_data(self, **kwargs)
         data.update({'report': self.report,
@@ -212,7 +214,7 @@ class ReportView(ListView, RequestReportMixin):
                      'charts': self.report_request.get_charts(self.output_format, self.object_list),
                     "urlparams":urlencode(self.report_request.params)})
         return data
-    
+
     def get_output_format(self):
         outputformat = None
         output = self.kwargs.get('output', 'admin')
@@ -224,7 +226,7 @@ class ReportView(ListView, RequestReportMixin):
             outputformat = self.report.output_formats[0]
         self.output_format = outputformat
         return outputformat
-        
+
 
     def get(self, request, *args, **kwargs):
         try:
@@ -244,7 +246,7 @@ class ReportView(ListView, RequestReportMixin):
             return render_to_response("reportengine/async_wait.html",
                                       cx,
                                       context_instance=RequestContext(self.request))
-        
+
         self.object_list = self.get_queryset()
         kwargs['object_list'] = self.object_list
         data = self.get_context_data(**kwargs)
@@ -254,13 +256,13 @@ view_report = never_cache(staff_member_required(ReportView.as_view()))
 
 class ReportExportView(TemplateView, RequestReportMixin):
     asynchronous_report = ASYNC_REPORTS
-    
+
     def get_report_request(self):
         token = self.kwargs['token']
         self.report_request = ReportRequest.objects.get(token=token)
         self.report = self.report_request.get_report()
         ReportRequest.objects.filter(pk=self.report_request.pk).update(viewed_on=datetime.datetime.now())
-    
+
     def get_report_export_request(self):
         try:
             self.report_export_request = self.report_request.exports.get(format=self.kwargs['output'])
@@ -275,19 +277,19 @@ class ReportExportView(TemplateView, RequestReportMixin):
                 self.task = self.report_export_request.schedule_task()
             else:
                 self.report_export_request.build_report()
-    
+
     def check_report_export_status(self):
         #check to see if the report is not complete but async is off
         if not self.report_export_request.completion_timestamp and (not self.asynchronous_report or getattr(settings, 'CELERY_ALWAYS_EAGER', False)):
             self.report_export_request.build_report()
             assert self.report_export_request.completion_timestamp
-        
+
         #check to see if the task failed
         if self.report_export_request.task_status() in ('FAILURE',):
             return {'error':'Task Failed', 'completed':False}
-        
+
         return {'completed':bool(self.report_export_request.completion_timestamp)}
-    
+
     def get(self, request, *args, **kwargs):
         try:
             self.get_report_request()
@@ -307,11 +309,11 @@ class ReportExportView(TemplateView, RequestReportMixin):
             return render_to_response("reportengine/async_wait.html",
                                       cx,
                                       context_instance=RequestContext(self.request))
-        
+
         #if the report is small enough there is no need to create a task to export
         if self.report_request.rows.all().count() <=  MAX_ROWS_FOR_QUICK_EXPORT:
             return ReportView.as_view()(self.request, *self.args, **self.kwargs)
-        
+
         self.get_report_export_request()
         status = self.check_report_export_status()
         if 'error' in status: #there was an error, try recreating the report
@@ -389,4 +391,3 @@ def calendar_day_view(request, year, month,day):
     cx={"reports":reports,"date":date,"calendar":cal}
     return render_to_response("reportengine/calendar_day.html",cx,
                               context_instance=RequestContext(request))
-
