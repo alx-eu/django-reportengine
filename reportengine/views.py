@@ -164,7 +164,7 @@ class ReportView(ListView, RequestReportMixin):
         return ReportRowQuery(self.report_request.rows.all())
 
     def get_filter_form(self):
-        filter_form = self.report.get_filter_form(self.request.REQUEST)
+        filter_form = self.report.get_filter_form(self.request.GET)
         return filter_form
 
     def get_changelist(self, info):
@@ -350,7 +350,7 @@ def day_redirect(request, year, month, day, namespace, slug, output=None):
 def redirect_report_on_date(request,start_day,end_day,namespace,slug,output=None):
     """Utility that allows for a redirect of a report based upon the date range to the appropriate filter"""
     report=reportengine.get_report(namespace,slug)
-    params = dict(request.REQUEST)
+    params = dict(request.GET)
     if report.date_field:
         # TODO this only works with model fields, needs to be more generic
         dates = {"%s__gte"%report.date_field:start_day,"%s__lt"%report.date_field:end_day}

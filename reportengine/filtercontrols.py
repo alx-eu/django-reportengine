@@ -3,10 +3,11 @@
 Different filter controls can be registered per field type. When assembling a set of filter controls, these field types will generate the appropriate set of fields. These controls will be based upon what is appropriate for that field. For instance, a datetimefield for filtering requires a start/end. A boolean field needs an "all", "true" or "false" in radio buttons.
 
 """
+from collections import OrderedDict
+
 from django import forms
 from django.db import models
 from django.utils.translation import ugettext as _
-from django.utils.datastructures import SortedDict
 
 # TODO build register and lookup functions
 # TODO figure out how to manage filters and actual request params, which aren't always 1-to-1 (e.g. datetime)
@@ -44,7 +45,7 @@ class DateTimeFilterControl(FilterControl):
         ln=self.label or self.field_name
         start=forms.CharField(label=_("%s From")%ln,required=False,widget=forms.DateTimeInput(attrs={'class': 'vDateField'}))
         end=forms.CharField(label=_("%s To")%ln,required=False,widget=forms.DateTimeInput(attrs={'class': 'vDateField'}))
-        return SortedDict([("%s__gte"%self.field_name, start),
+        return OrderedDict([("%s__gte"%self.field_name, start),
                            ("%s__lt"%self.field_name, end),])
 
 FilterControl.register(lambda m: isinstance(m,models.DateTimeField),DateTimeFilterControl,"datetime")

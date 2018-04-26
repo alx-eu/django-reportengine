@@ -74,7 +74,7 @@ class CSVOutputFormat(OutputFormat):
         return output
 
     def get_response(self,context,request):
-        resp = HttpResponse(mimetype='text/csv')
+        resp = HttpResponse(content_type='text/csv')
         # CONSIDER maybe a "get_filename" from the report?
         resp['Content-Disposition'] = 'attachment; filename=%s.csv'%context['report'].slug
         self.generate_output(context, resp)
@@ -106,7 +106,7 @@ class XLSOutputFormat(OutputFormat):
         workbook.save(output)
 
     def get_response(self, context, request):
-        resp = HttpResponse(mimetype='application/vnd.ms-excel')
+        resp = HttpResponse(content_type='application/vnd.ms-excel')
         resp['Content-Disposition'] = 'attachment; filename=%s.xls' % context['report'].slug
         self.generate_output(context, resp)
         return resp
@@ -140,7 +140,7 @@ class XMLOutputFormat(OutputFormat):
         tree.write(output)
 
     def get_response(self,context,request):
-        resp = HttpResponse(mimetype='text/xml')
+        resp = HttpResponse(content_type='text/xml')
         # CONSIDER maybe a "get_filename" from the report?
         resp['Content-Disposition'] = 'attachment; filename=%s.xml'%context['report'].slug
         self.generate_output(context, resp)
