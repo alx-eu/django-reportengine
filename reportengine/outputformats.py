@@ -1,6 +1,5 @@
 from django.core.exceptions import ImproperlyConfigured
-from django.shortcuts import render_to_response
-from django.template.context import RequestContext
+from django.shortcuts import render
 from django.http import HttpResponse
 from django.utils.encoding import smart_unicode
 import csv
@@ -41,8 +40,7 @@ class AdminOutputFormat(OutputFormat):
 
     def get_response(self,context,request):
         context.update({"output_format":self})
-        return render_to_response('reportengine/report.html', context,
-                              context_instance=RequestContext(request))
+        return render(request, 'reportengine/report.html', context )
 
     def can_embed(self, chart):
         # Actually, initalize_html is also used in template but we don't consider it as required attribute.

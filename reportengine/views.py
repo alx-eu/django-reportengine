@@ -1,7 +1,6 @@
 from settings import ASYNC_REPORTS, MAX_ROWS_FOR_QUICK_EXPORT
 
-from django.shortcuts import render_to_response,redirect
-from django.template.context import RequestContext
+from django.shortcuts import render,redirect
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect, Http404
@@ -25,8 +24,7 @@ def report_list(request):
     # TODO make sure to constrain based upon permissions
     reports = [{'namespace': r.namespace, 'slug': r.slug, 'verbose_name': r.verbose_name} \
             for s, r in reportengine.all_reports()]
-    return render_to_response('reportengine/list.html', {'reports': reports},
-                              context_instance=RequestContext(request))
+    return render(request, 'reportengine/list.html', {'reports': reports} )
 
 class ReportRowQuery(object):
     def __init__(self, queryset):
@@ -243,9 +241,7 @@ class ReportView(ListView, RequestReportMixin):
             cx = {"report_request":self.report_request,
                   "report":self.report,
                   'title':self.report.verbose_name,}
-            return render_to_response("reportengine/async_wait.html",
-                                      cx,
-                                      context_instance=RequestContext(self.request))
+            return render(request, "reportengine/async_wait.html", cx )
 
         self.object_list = self.get_queryset()
         kwargs['object_list'] = self.object_list
@@ -306,9 +302,7 @@ class ReportExportView(TemplateView, RequestReportMixin):
                   'title':self.report.verbose_name,
                   'format':self.kwargs['output'],}
             print cx
-            return render_to_response("reportengine/async_wait.html",
-                                      cx,
-                                      context_instance=RequestContext(self.request))
+            return render(request, "reportengine/async_wait.html", cx )
 
         #if the report is small enough there is no need to create a task to export
         if self.report_request.rows.all().count() <=  MAX_ROWS_FOR_QUICK_EXPORT:
@@ -325,9 +319,7 @@ class ReportExportView(TemplateView, RequestReportMixin):
                   "report":self.report,
                   'title':self.report.verbose_name,
                   'format':self.kwargs['output'],}
-            return render_to_response("reportengine/async_wait.html",
-                                      cx,
-                                      context_instance=RequestContext(self.request))
+            return render(request, "reportengine/async_wait.html", cx )
         return HttpResponseRedirect(self.report_export_request.payload.url)
 
 view_report_export = never_cache(staff_member_required(ReportExportView.as_view()))
@@ -376,8 +368,7 @@ def calendar_month_view(request, year, month):
     cal=calendar.monthcalendar(year,month)
     # TODO possibly pull in date based aggregates?
     cx={"reports":reports,"date":date,"calendar":cal,"prev":prev_month,"next":nxt_month}
-    return render_to_response("reportengine/calendar_month.html",cx,
-                              context_instance=RequestContext(request))
+    return render(request, "reportengine/calendar_month.html",cx)
 
 @staff_member_required
 def calendar_day_view(request, year, month,day):
@@ -389,5 +380,4 @@ def calendar_day_view(request, year, month,day):
     cal=calendar.monthcalendar(year,month)
     # TODO possibly pull in date based aggregates?
     cx={"reports":reports,"date":date,"calendar":cal}
-    return render_to_response("reportengine/calendar_day.html",cx,
-                              context_instance=RequestContext(request))
+    return render(request, "reportengine/calendar_day.html",cx )
